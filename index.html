@@ -2,13 +2,24 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Rolador por Jogador</title>
+    <title>Rolador com Histórico</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body {
             font-family: Arial, sans-serif;
             background-color: #f0f2f5;
-            padding: 10px;
+            padding: 200px 10px 10px; /* Espaço para o cabeçalho fixo */
+        }
+
+        .header-fixo {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background-color: white;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            z-index: 1000;
         }
 
         .container {
@@ -22,7 +33,7 @@
             border: none;
             padding: 12px 20px;
             border-radius: 6px;
-            margin: 8px;
+            margin: 5px;
             cursor: pointer;
         }
 
@@ -50,38 +61,55 @@
             margin: 10px 0;
         }
 
-        #contador {
-            color: #666;
-            text-align: center;
+        .share-btn {
+            background-color: #25D366 !important;
+        }
+
+        .input-group {
             margin: 10px 0;
         }
 
-        .senha-container {
-            display: none;
-            margin-top: 10px;
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
         }
     </style>
 </head>
 <body>
+    <div class="header-fixo">
+        <div class="container">
+            <div class="input-group">
+                <input type="text" id="playerName" placeholder="Digite seu nome">
+            </div>
+            
+            <div id="contador"></div>
+            
+            <div style="display: flex; gap: 5px;">
+                <button class="botao" onclick="rolar4d6()" id="rolarBtn">
+                    🎲 Rolar 4d6
+                </button>
+                
+                <button class="botao share-btn" onclick="compartilharHistorico()">
+                    📤 Compartilhar
+                </button>
+            </div>
+
+            <div id="avisos"></div>
+            
+            <div id="senhaContainer" class="senha-container">
+                <input type="password" id="senhaInput" placeholder="Senha de desbloqueio">
+                <button class="botao" onclick="desbloquearNome()">🔓 Desbloquear</button>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
-        <div id="contador"></div>
-        
         <div class="historico">
             <h3>Histórico de Rolagens</h3>
             <div id="ultimasRolagens"></div>
         </div>
-
-        <input type="text" id="playerName" placeholder="Digite seu nome">
-        <div id="avisos"></div>
-        
-        <div id="senhaContainer" class="senha-container">
-            <input type="password" id="senhaInput" placeholder="Senha de desbloqueio">
-            <button class="botao" onclick="desbloquearNome()">🔓 Desbloquear</button>
-        </div>
-
-        <button class="botao" onclick="rolar4d6()" id="rolarBtn">
-            🎲 Rolar 4d6 (3 maiores)
-        </button>
     </div>
 
     <script>
@@ -95,21 +123,41 @@
             const contador = contadorRolagens[nome] || 0;
             
             document.getElementById('contador').innerHTML = `
-                Rolagens restantes para <strong>${nome || '...'}</strong>: ${7 - contador}
+                Rolagens restantes: <strong>${7 - contador}</strong>
             `;
 
             document.getElementById('senhaContainer').style.display = 
                 nomesBloqueados.has(nome) ? 'block' : 'none';
 
             document.getElementById('ultimasRolagens').innerHTML = 
-                (historico[nome] || []).map(roll => `
-                    <div class="rolagem-item">
-                        ${roll.data}<br>
-                        ${roll.resultado.replace(/\n/g, '<br>')}
-                    </div>
-                `).join('') || "Nenhuma rolagem para este nome";
+                Object.keys(historico).map(nome => 
+                    historico[nome].map(roll => `
+                        <div class="rolagem-item">
+                            <strong>${nome}</strong> - ${roll.data}<br>
+                            ${roll.resultado.replace(/\n/g, '<br>')}
+                        </div>
+                    `).join('')
+                ).join('') || "Nenhuma rolagem registrada";
         }
 
+        function compartilharHistorico() {
+            const historicoTexto = Object.keys(historico).map(nome => 
+                `*Jogador: ${nome}*\n` +
+                historico[nome].map(roll => 
+                    `${roll.data}\n${roll.resultado}`
+                ).join('\n\n')
+            ).join('\n\n');
+
+            const texto = encodeURIComponent(
+                `*Histórico de Rolagens*\n\n${historicoTexto}\n\n` +
+                `Total de rolagens: ${Object.values(historico).flat().length}\n` +
+                `🎮 Rolador RPG - ${new Date().toLocaleDateString()}`
+            );
+
+            window.open(`https://wa.me/?text=${texto}`);
+        }
+
+        // Mantidas as funções anteriores (verificarBloqueio, desbloquearNome, rolar4d6)
         function verificarBloqueio(nome) {
             if(nomesBloqueados.has(nome)) {
                 document.getElementById('avisos').innerHTML = "⛔ Nome bloqueado!";
@@ -145,25 +193,22 @@
 
             if(verificarBloqueio(nome)) return;
 
-            // Verificar limite
             if((contadorRolagens[nome] || 0) >= 7) {
                 nomesBloqueados.add(nome);
-                document.getElementById('avisos').innerHTML = "⛔ Limite de 7 rolagens atingido!";
+                document.getElementById('avisos').innerHTML = "⛔ Limite de 7 rolagens!";
                 document.getElementById('rolarBtn').classList.add('bloqueado');
                 return;
             }
 
-            // Fazer rolagem
             const dados = Array.from({length: 4}, () => Math.floor(Math.random() * 6) + 1);
             const sorted = [...dados].sort((a, b) => b - a);
             const total = sorted.slice(0, 3).reduce((a, b) => a + b, 0);
             
             const resultado = {
                 data: new Date().toLocaleString(),
-                resultado: `🎲 Rolagem: ${dados.join(', ')}\n✅ Mantidos: ${sorted.slice(0, 3).join(', ')}\n❌ Descartado: ${sorted[3]}\n💯 Total: ${total}`
+                resultado: `🎲 Dados: ${dados.join(', ')}\n✅ Mantidos: ${sorted.slice(0, 3).join(', ')}\n❌ Descartado: ${sorted[3]}\n💯 Total: ${total}`
             };
 
-            // Atualizar registros
             contadorRolagens[nome] = (contadorRolagens[nome] || 0) + 1;
             historico[nome] = [...(historico[nome] || []), resultado];
             
@@ -171,14 +216,12 @@
             document.getElementById('avisos').innerHTML = "";
         }
 
-        // Event listeners
         document.getElementById('playerName').addEventListener('input', function() {
             document.getElementById('rolarBtn').classList.remove('bloqueado');
             document.getElementById('avisos').innerHTML = "";
             atualizarInterface();
         });
 
-        // Inicialização
         atualizarInterface();
     </script>
 </body>
