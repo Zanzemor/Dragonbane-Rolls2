@@ -139,7 +139,7 @@
             const nome = document.getElementById('playerName').value.trim().toLowerCase();
             
             if(!nome) {
-                document.getElementById('avisos').innerHTML = "⚠ Digite um nome válido!";
+                document.getElementById('avisos').innerHTML = "⚠️ Digite um nome válido!";
                 return;
             }
 
@@ -160,7 +160,7 @@
             
             const resultado = {
                 data: new Date().toLocaleString(),
-                resultado: 🎲 Rolagem: ${dados.join(', ')}\n✅ Mantidos: ${sorted.slice(0, 3).join(', ')}\n❌ Descartado: ${sorted[3]}\n💯 Total: ${total}
+                resultado: `🎲 Rolagem: ${dados.join(', ')}\n✅ Mantidos: ${sorted.slice(0, 3).join(', ')}\n❌ Descartado: ${sorted[3]}\n💯 Total: ${total}`
             };
 
             // Atualizar registros
